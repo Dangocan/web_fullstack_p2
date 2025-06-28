@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+.debbug__red {
+  border: 1px solid red;
+}
+
+.debbug__blue {
+  border: 1px solid blue;
+}
