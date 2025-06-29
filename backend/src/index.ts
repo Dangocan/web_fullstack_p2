@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
+import { AuthRouter, UserRouter } from "./routes";
 
 import { connectToDatabase } from "./config/database.utils";
 
@@ -15,6 +16,8 @@ app.use(
   })
 );
 app.use(express.json());
+
+app.use(AuthRouter, UserRouter);
 
 connectToDatabase().then(({ connectionSuccess }) => {
   app.listen(process.env.BACKEND_PORT, () => {
