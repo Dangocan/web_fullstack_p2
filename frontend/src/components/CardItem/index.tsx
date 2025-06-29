@@ -50,7 +50,7 @@ function CardItem({ item }: IProps) {
         ) : item?.laureates[0]?.orgName?.en ? (
           item?.laureates[0]?.orgName?.en
         ) : (
-          ""
+          "-- no names --"
         )}
       </span>
     </li>

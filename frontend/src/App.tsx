@@ -15,9 +15,17 @@ function App() {
   const [loginEmail, setLoginEmail] = react.useState("");
   const [loginPassword, setLoginPassword] = react.useState("");
   const [loginError, setLoginError] = react.useState("");
+  const [showCreateDialog, setShowCreateDialog] = react.useState(false);
+  const [dateAwarded, setDateAwarded] = react.useState("");
+  const [categoryEn, setCategoryEn] = react.useState("");
+  const [laureates, setLaureates] = react.useState([
+    { fullName: { id: "", en: "" }, orgName: { id: "", en: "" } },
+  ]);
+  const [createError, setCreateError] = react.useState("");
 
   const itemListRef = react.useRef<HTMLUListElement>(null);
   const loginDialogRef = react.useRef<HTMLDialogElement>(null);
+  const createDialogRef = react.useRef<HTMLDialogElement>(null);
 
   const api = async (url: string) =>
     await fetch(`${API_URL}${url}`, {
@@ -103,6 +111,42 @@ function App() {
     setIsLoggedIn(false);
   };
 
+  const handleCreateNobel = async () => {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) {
+      setCreateError("You must be logged in.");
+      return;
+    }
+
+    try {
+      const body = {
+        awardYear: Number(dateAwarded?.slice(0, 4)), // extrai ano da data
+        dateAwarded,
+        category: { en: categoryEn },
+        laureates,
+      };
+      const response = await fetch(`${API_URL}/nobelPrizes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Error creating Nobel entry");
+      }
+
+      createDialogRef.current?.close();
+      // Opcional: você pode forçar um refetch dos dados
+      alert("Nobel entry created successfully.");
+    } catch (err: any) {
+      setCreateError(err.message);
+    }
+  };
+
   const scrollToTop = () => {
     if (itemListRef.current) {
       itemListRef.current.scrollTo({
@@ -169,6 +213,12 @@ function App() {
       </header>
       <main className="bg-zinc-50 grid w-full h-[calc(100vh-50px)] grid-cols-[20rem_1fr] gap-6">
         <div className="border-r-1 border-zinc-400 bg-zinc-100 shadow-lg p-4 flex flex-col">
+          <button
+            className="mb-4 bg-green-600 text-white rounded px-3 py-1 hover:bg-green-500"
+            onClick={() => createDialogRef.current?.showModal()}
+          >
+            + Add Nobel
+          </button>
           <div className="flex items-center gap-2">
             <div className="flex flex-col">
               <label htmlFor="nobelSerchField" className="mr-2 mb-2">
@@ -282,6 +332,120 @@ function App() {
               className="border px-4 py-2 rounded hover:bg-zinc-200"
             >
               Cancelar
+            </button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog
+        ref={createDialogRef}
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded shadow-xl w-[600px] max-w-full p-6 z-50"
+      >
+        <form
+          method="dialog"
+          className="flex flex-col gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleCreateNobel();
+          }}
+        >
+          <h2 className="text-lg font-semibold">Add New Nobel</h2>
+          <input
+            type="date"
+            placeholder="Date Awarded"
+            className="border p-2 rounded"
+            value={dateAwarded}
+            onChange={(e) => setDateAwarded(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Category (EN)"
+            className="border p-2 rounded"
+            value={categoryEn}
+            onChange={(e) => setCategoryEn(e.target.value)}
+          />
+
+          <h3 className="font-semibold mt-2">Laureates</h3>
+          {laureates.map((laureate, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-2 gap-2 border p-2 rounded"
+            >
+              <input
+                type="text"
+                placeholder="Full Name ID"
+                className="border p-1 rounded"
+                value={laureate.fullName.id}
+                onChange={(e) => {
+                  const updated = [...laureates];
+                  updated[index].fullName.id = e.target.value;
+                  setLaureates(updated);
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Full Name (EN)"
+                className="border p-1 rounded"
+                value={laureate.fullName.en}
+                onChange={(e) => {
+                  const updated = [...laureates];
+                  updated[index].fullName.en = e.target.value;
+                  setLaureates(updated);
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Org Name ID"
+                className="border p-1 rounded"
+                value={laureate.orgName.id}
+                onChange={(e) => {
+                  const updated = [...laureates];
+                  updated[index].orgName.id = e.target.value;
+                  setLaureates(updated);
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Org Name (EN)"
+                className="border p-1 rounded"
+                value={laureate.orgName.en}
+                onChange={(e) => {
+                  const updated = [...laureates];
+                  updated[index].orgName.en = e.target.value;
+                  setLaureates(updated);
+                }}
+              />
+            </div>
+          ))}
+
+          <button
+            type="button"
+            className="text-blue-600 hover:underline self-start"
+            onClick={() =>
+              setLaureates([
+                ...laureates,
+                { fullName: { id: "", en: "" }, orgName: { id: "", en: "" } },
+              ])
+            }
+          >
+            + Add Laureate
+          </button>
+
+          {createError && <p className="text-red-500">{createError}</p>}
+
+          <div className="flex justify-end gap-2">
+            <button
+              type="submit"
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-500"
+            >
+              Create
+            </button>
+            <button
+              type="button"
+              className="border px-4 py-2 rounded hover:bg-zinc-200"
+              onClick={() => createDialogRef.current?.close()}
+            >
+              Cancel
             </button>
           </div>
         </form>
