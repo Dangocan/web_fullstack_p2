@@ -11,14 +11,20 @@ function App() {
   const [searchValue, setSearchValue] = react.useState("");
   const [loading, setLoading] = react.useState(false);
   const [showTopButton, setShowTopButton] = react.useState(false);
+  const [isLoggedIn, setIsLoggedIn] = react.useState(false);
+  const [loginEmail, setLoginEmail] = react.useState("");
+  const [loginPassword, setLoginPassword] = react.useState("");
+  const [loginError, setLoginError] = react.useState("");
 
   const itemListRef = react.useRef<HTMLUListElement>(null);
+  const loginDialogRef = react.useRef<HTMLDialogElement>(null);
 
   const api = async (url: string) =>
     await fetch(`${API_URL}${url}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("jwtToken") || ""}`,
       },
     })
       .then((response) => response.json())
@@ -45,6 +51,10 @@ function App() {
   };
 
   const handleSubmit = async () => {
+    if (!localStorage.getItem("jwtToken")) {
+      setError("You must be logged in to search.");
+      return;
+    }
     if (Number.isNaN(Number(searchValue)) || searchValue.length !== 4) {
       setError(
         "The value must be a valid year number greater than 1901 in YYYY format."
@@ -56,6 +66,41 @@ function App() {
       const nobelArray = await handleApiCall(searchValue || "");
       setNobelArray(nobelArray);
     }
+  };
+
+  const handleLogin = async () => {
+    if (!loginEmail || !loginPassword) {
+      setLoginError("Email and password are required.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Login failed");
+
+      // ✅ Salva o token
+      localStorage.setItem("jwtToken", data.jwtToken);
+      setIsLoggedIn(true);
+      setLoginError("");
+      setError("");
+      loginDialogRef.current?.close();
+    } catch (err: any) {
+      setLoginError(err.message);
+    }
+  };
+
+  const handleLogout = () => {
+    setError("");
+    setNobelArray([]);
+    setSearchValue("");
+    localStorage.removeItem("jwtToken");
+    setIsLoggedIn(false);
   };
 
   const scrollToTop = () => {
@@ -97,10 +142,30 @@ function App() {
     }
   }, [nobelArray]);
 
+  react.useEffect(() => {
+    const token = localStorage.getItem("jwtToken");
+    setIsLoggedIn(!!token);
+  }, []);
+
   return (
     <DialogProvider>
-      <header className="h-[50px] flex justify-center items-center p-4 bg-zinc-900 text-neutral-100 font-semibold">
-        Nobel Prize Finder
+      <header className="h-[50px] flex justify-between items-center p-4 bg-zinc-900 text-neutral-100 font-semibold">
+        <span>Nobel Prize Finder</span>
+        {isLoggedIn ? (
+          <button
+            className="bg-red-600 hover:bg-red-500 px-4 py-1 rounded"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        ) : (
+          <button
+            className="bg-zinc-700 hover:bg-zinc-600 px-4 py-1 rounded"
+            onClick={() => loginDialogRef.current?.showModal()}
+          >
+            Login
+          </button>
+        )}
       </header>
       <main className="bg-zinc-50 grid w-full h-[calc(100vh-50px)] grid-cols-[20rem_1fr] gap-6">
         <div className="border-r-1 border-zinc-400 bg-zinc-100 shadow-lg p-4 flex flex-col">
@@ -175,6 +240,52 @@ function App() {
       <footer className="flex justify-center items-center p-4 bg-zinc-900 text-neutral-100 font-semibold">
         Made by Dangocan
       </footer>
+
+      <dialog
+        ref={loginDialogRef}
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded shadow-xl w-96 max-w-full p-6 bg-white z-50"
+      >
+        <form
+          method="dialog"
+          className="flex flex-col gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleLogin();
+          }}
+        >
+          <h2 className="text-lg font-semibold">Login</h2>
+          <input
+            type="email"
+            placeholder="Email"
+            className="border p-2 rounded"
+            value={loginEmail}
+            onChange={(e) => setLoginEmail(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            className="border p-2 rounded"
+            value={loginPassword}
+            onChange={(e) => setLoginPassword(e.target.value)}
+          />
+          {loginError && <p className="text-red-500 text-sm">{loginError}</p>}
+          <div className="flex justify-end gap-2 mt-2">
+            <button
+              type="submit"
+              className="bg-zinc-900 text-white px-4 py-2 rounded hover:bg-zinc-700"
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              onClick={() => loginDialogRef.current?.close()}
+              className="border px-4 py-2 rounded hover:bg-zinc-200"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </dialog>
     </DialogProvider>
   );
 }
