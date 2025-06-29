@@ -2,6 +2,9 @@ import react from "react";
 import { CardItem } from "./components";
 import { DialogProvider } from "./contexts/DialogContext";
 
+// const API_URL = "https://api.nobelprize.org/2.1";
+const API_URL = "http://localhost:3333";
+
 function App() {
   const [nobelArray, setNobelArray] = react.useState([]);
   const [error, setError] = react.useState("");
@@ -12,7 +15,7 @@ function App() {
   const itemListRef = react.useRef<HTMLUListElement>(null);
 
   const api = async (url: string) =>
-    await fetch(`https://api.nobelprize.org/2.1${url}`, {
+    await fetch(`${API_URL}${url}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
